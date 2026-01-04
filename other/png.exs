@@ -17,6 +17,47 @@ defmodule Png do
     end
   end
 
+  defmodule Ihdr do
+    defstruct width: 0,
+              height: 0,
+              bit_depth: 1,
+              color_type: 0,
+              compression_method: 0,
+              filter_method: 0,
+              interlace_method: 0
+  end
+
+  defp ihdr!(device) do
+    case chunk(device) do
+      %Chunk{
+        length: 13,
+        type: "IHDR",
+        data: <<
+          width::size(32),
+          height::size(32),
+          bit_depth::size(8),
+          color_type::size(8),
+          compression_method::size(8),
+          filter_method::size(8),
+          interlace_method::size(8)
+        >>,
+        crc: _
+      } ->
+        %Ihdr{
+          width: width,
+          height: height,
+          bit_depth: bit_depth,
+          color_type: color_type,
+          compression_method: compression_method,
+          filter_method: filter_method,
+          interlace_method: interlace_method
+        }
+
+      _ ->
+        raise "invalid IHDR chunk"
+    end
+  end
+
   defp chunks!(device) do
     Stream.unfold(device, fn device ->
       case chunk(device) do
@@ -30,6 +71,7 @@ defmodule Png do
   def inspect_chunks!(path) do
     File.open!(path, fn device ->
       header!(device)
+      ihdr!(device) |> IO.inspect()
       chunks!(device) |> Enum.each(&IO.inspect/1)
     end)
   end
